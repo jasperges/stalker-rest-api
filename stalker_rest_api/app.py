@@ -4,6 +4,7 @@ import json
 
 from flask import Flask, request
 from flask_restful import Resource, Api
+from sqlalchemy import or_
 
 
 from stalker import db, User, Project
@@ -49,6 +50,8 @@ class ApiUser(Resource):
 
     def post(self, login):
         data = request.get_json()
+        if User.query.filter(or_(User.login==login, User.email==data['email'])).first():
+            return {'message': 'A user with this login or email already exists'}, 400
         user = User(
             name=data['name'],
             email=data['email'],
