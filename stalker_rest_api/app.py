@@ -2,20 +2,19 @@ import pathlib
 import json
 
 
-from flask import Flask
+from flask import Flask, request
 from flask_restful import Resource, Api
 
 
-from stalker import db
+from stalker import db, User, Project
 from stalker.db.session import DBSession
-from stalker import User
-from stalker import Project
 
 
 app = Flask(__name__)
+api = Api(app)
 
 
-# Connect to Stalker test database
+# Connect to Stalker (test) database
 def connect_to_stalker():
     """Setup the connection to the Stalker database"""
     root = pathlib.Path(__file__).parent
@@ -41,9 +40,38 @@ def format_project(project):
             "code": project.code}
 
 
+class ApiUser(Resource):
+    def get(self, login):
+        user = User.query.filter_by(login=login).first()
+        if user:
+            return format_user(user)
+        return {'user': None}, 404
+
+    def post(self, login):
+        data = request.get_json()
+        user = User(
+            name=data['name'],
+            email=data['email'],
+            login=login,
+            password=data['password'],
+        )
+        DBSession.save(user)
+        return format_user(user), 201
+
+
+class ApiUsers(Resource):
+    def get(self):
+        users = [format_user(user) for user in User.query.all()]
+        if users:
+            return users
+        return {'users': None}, 404
+
+
 def main():
     connect_to_stalker()
-    app.run(port=5000)
+    api.add_resource(ApiUser, '/user/<string:login>')
+    api.add_resource(ApiUsers, '/users')
+    app.run(port=5000, debug=True)
 
 
 if __name__ == "__main__":
