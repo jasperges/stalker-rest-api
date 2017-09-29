@@ -58,6 +58,14 @@ class ApiUser(Resource):
         DBSession.save(user)
         return format_user(user), 201
 
+    def delete(self, login):
+        user = User.query.filter_by(login=login).first()
+        if not user:
+            return {'user': None}, 404
+        DBSession.delete(user)
+        DBSession.commit()
+        return {'message': 'Deleted user \'{}\''.format(login)}
+
 
 class ApiUsers(Resource):
     def get(self):
