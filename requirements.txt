@@ -1,2 +1,2 @@
-Flask
-stalker
+Flask==0.12.2
+stalker==0.2.21
