@@ -44,9 +44,9 @@ def format_project(project):
 class ApiUser(Resource):
     def get(self, login):
         user = User.query.filter_by(login=login).first()
-        if user:
-            return format_user(user)
-        return {'user': None}, 404
+        if not user:
+            return {'user': None}, 404
+        return format_user(user)
 
     def post(self, login):
         data = request.get_json()
