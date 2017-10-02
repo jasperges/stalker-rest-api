@@ -3,7 +3,7 @@ import json
 
 
 from flask import Flask, request
-from flask_restful import Resource, Api
+from flask_restful import Resource, Api, reqparse
 from flask_jwt_extended import (
     JWTManager,
     jwt_required,
@@ -77,7 +77,26 @@ class ApiUser(Resource):
             return {'message': 'User is not authorized to view information of other users'}, 401
 
     def post(self, login):
-        data = request.get_json()
+        parser = reqparse.RequestParser()
+        parser.add_argument(
+            "name",
+            type=str,
+            required=True,
+            help="A new user should have a name",
+        )
+        parser.add_argument(
+            "email",
+            type=str,
+            required=True,
+            help="A new user should have an email",
+        )
+        parser.add_argument(
+            "password",
+            type=str,
+            required=True,
+            help="A new user should have a password",
+        )
+        data = parser.parse_args()
         if User.query.filter(or_(User.login==login, User.email==data['email'])).first():
             return {'message': 'A user with this login or email already exists'}, 400
         user = User(
@@ -90,12 +109,31 @@ class ApiUser(Resource):
         return format_user(user), 201
 
     def put(self, login):
-        data = request.get_json()
+        parser = reqparse.RequestParser()
+        data = parser.parse_args()
         if not User.query.filter_by(login=login).first():
             if data.get('email') and User.query.filter_by(email=data['email']).first():
                 return {'message': 'A user with this email already exists'}, 400
-            if not data.get('name') or not data.get('email') or not data.get('password'):
-                return {'message': 'For new users name, email and password are required'}, 400
+            parser = reqparse.RequestParser()
+            parser.add_argument(
+                "name",
+                type=str,
+                required=True,
+                help="A new user should have a name",
+            )
+            parser.add_argument(
+                "email",
+                type=str,
+                required=True,
+                help="A new user should have an email",
+            )
+            parser.add_argument(
+                "password",
+                type=str,
+                required=True,
+                help="A new user should have a password",
+            )
+            data = parser.parse_args()
             user = User(
                 name=data['name'],
                 email=data['email'],
