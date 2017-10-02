@@ -4,6 +4,12 @@ import json
 
 from flask import Flask, request
 from flask_restful import Resource, Api
+from flask_jwt_extended import (
+    JWTManager,
+    jwt_required,
+    create_access_token,
+    get_jwt_identity,
+)
 from sqlalchemy import or_
 
 
@@ -12,7 +18,9 @@ from stalker.db.session import DBSession
 
 
 app = Flask(__name__)
+app.secret_key = 'secretkey'    # FIXME: just for testing
 api = Api(app)
+jwt = JWTManager(app)
 
 
 # Connect to Stalker (test) database
@@ -41,12 +49,32 @@ def format_project(project):
             "code": project.code}
 
 
+class Login(Resource):
+    def post(self):
+        data = request.get_json()
+        login = data.get('login')
+        password = data.get('password')
+        if not login:
+            return {'message': 'Missing login parameter'}, 400
+        if not password:
+            return {'message': 'Missing password parameter'}, 400
+        user = User.query.filter(or_(User.login==login, User.email==login)).first()
+        if user and user.check_password(password):
+            ret = {'access_token': create_access_token(identity=user.id)}
+            return ret, 200
+
+
 class ApiUser(Resource):
+    @jwt_required
     def get(self, login):
+        identity = get_jwt_identity()
         user = User.query.filter_by(login=login).first()
         if not user:
             return {'user': None}, 404
-        return format_user(user)
+        if user.id == identity:
+            return format_user(user)
+        else:
+            return {'message': 'User is not authorized to view information of other users'}, 401
 
     def post(self, login):
         data = request.get_json()
@@ -80,6 +108,7 @@ class ApiUsers(Resource):
 
 def main():
     connect_to_stalker()
+    api.add_resource(Login, '/login')
     api.add_resource(ApiUser, '/user/<string:login>')
     api.add_resource(ApiUsers, '/users')
     app.run(port=5000, debug=True)
