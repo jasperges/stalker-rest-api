@@ -12,6 +12,7 @@ flask-restful = "*"
 flask-jwt-extended = "*"
 marshmallow = "*"
 stalker = "*"
+"psycopg2" = "*"
 
 
 [dev-packages]
